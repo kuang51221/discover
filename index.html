@@ -1,34 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Welcome to Discover</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f9f9f9;
-            color: #222;
-        }
-        h1 {
-            color: #3178c6;
-        }
-        .container {
-            max-width: 700px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 2em;
-            border-radius: 10px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>WebSocket Echo Example</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    #messages { border: 1px solid #ccc; min-height: 100px; padding: 1em; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to Discover</h1>
-        <p>This is a simple <code>index.html</code> page for your project repository.</p>
-        <p>Edit this file to get started building your web application.</p>
-    </div>
+  <h1>WebSocket Echo Demo</h1>
+  <input type="text" id="input" placeholder="Type a message...">
+  <button id="sendBtn">Send</button>
+  <div id="messages"></div>
+
+  <script>
+    const serverUrl = 'wss://ws.ifelse.io'; // Change to your echo server if needed
+    const ws = new WebSocket(serverUrl);
+    const messagesDiv = document.getElementById('messages');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function log(msg) {
+      messagesDiv.innerHTML += `<div>${msg}</div>`;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    ws.onopen = () => log('Connected to ' + serverUrl);
+    ws.onclose = () => log('Connection closed.');
+    ws.onerror = (err) => log('WebSocket error: ' + err.message);
+
+    ws.onmessage = (event) => log('Received: ' + event.data);
+
+    sendBtn.onclick = () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(input.value);
+        log('Sent: ' + input.value);
+        input.value = '';
+      } else {
+        log('WebSocket not connected.');
+      }
+    };
+
+    input.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+  </script>
 </body>
 </html>
