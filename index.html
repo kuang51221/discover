@@ -63,9 +63,13 @@
     let localStream;
     let peers = {};
     
-    // 加入房間按鈕點擊事件
+    // 加入房間
     document.getElementById('joinBtn').addEventListener('click', async () => {
       const roomId = document.getElementById('roomId').value;
+      const room = joinRoom(config, roomId, {
+        stream: true,
+        data: true
+      });
       
       // 配置 Trystero
       const appId = 'your-app-id';
