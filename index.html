@@ -3,13 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trystero with Firebase Demo</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/trystero@0.22.0/dist/trystero.js"></script>
+  <title>Trystero with Firebase (ES Modules)</title>
 </head>
 <body>
-  <h1>Trystero with Firebase Demo</h1>
+  <h1>Trystero with Firebase (ES Modules)</h1>
   
   <div>
     <label for="roomId">Room ID:</label>
@@ -34,8 +31,17 @@
     <ul id="messages"></ul>
   </div>
 
+  <!-- 使用 ES Modules 方式導入 -->
   <script type="module">
-    import {joinRoom} from './trystero-torrent.min.js'
+    // 導入 Trystero
+    // 注意: 你需要確保 trystero-torrent.min.js 文件存在於指定路徑
+    // 或者使用 CDN 的模塊化版本
+    import { joinRoom } from './trystero-torrent.min.js';
+    
+    // Firebase 導入 (使用兼容模塊化版本的 Firebase)
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js';
+    import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js';
+    
     // 你的 Firebase 配置
     const firebaseConfig = {
     apiKey: "AIzaSyD8HLyXGtBX_m_qlGTSEzSwDJaqRpVF0og",
@@ -44,45 +50,49 @@
     projectId: "netdot-2a73d",
     storageBucket: "netdot-2a73d.firebasestorage.app",
     messagingSenderId: "560775014527",
-    appId: "1:560775014527:web:b8c9f0885d47df332cf74a"
+    appId: "1:560775014527:web:e02ca859dabb60632cf74a"
   };
-
+      
     // 初始化 Firebase
-    firebase.initializeApp(firebaseConfig);
-
-    // 創建 Trystero 配置
-    const appId = 'your-app-id'; // 可以是任意字符串，用於區分不同應用
-    const config = {appId, provider: 'firebase', firebaseConfig};
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
     
     let room;
     let localStream;
     let peers = {};
-
+    
     // 加入房間按鈕點擊事件
     document.getElementById('joinBtn').addEventListener('click', async () => {
       const roomId = document.getElementById('roomId').value;
       
-      // 初始化 Trystero 房間
-      const room = joinRoom(config, 'trystero-diagnostic-room').joinRoom(roomId, {
-        stream: true,
-        data: true
-      });
+      // 配置 Trystero
+      const appId = 'your-app-id';
+      const config = {appId, provider: 'firebase', firebaseConfig};
       
-      
-      // 設置事件監聽
-      setupRoomListeners(room);
-      
-      // 獲取本地媒體流
-      localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true
-      });
-      
-      // 顯示本地視頻
-      document.getElementById('localVideo').srcObject = localStream;
-      
-      // 發送流給其他對等端
-      room.addStream(localStream);
+      try {
+        // 使用導入的 joinRoom 函數
+        room = joinRoom(config, roomId, {
+          stream: true,
+          data: true
+        });
+        
+        // 設置事件監聽
+        setupRoomListeners(room);
+        
+        // 獲取本地媒體流
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true
+        });
+        
+        // 顯示本地視頻
+        document.getElementById('localVideo').srcObject = localStream;
+        
+        // 發送流給其他對等端
+        room.addStream(localStream);
+      } catch (error) {
+        console.error('Error joining room:', error);
+      }
     });
     
     // 設置房間事件監聽
