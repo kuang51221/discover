@@ -63,6 +63,10 @@
     let localStream;
     let peers = {};
     
+    // 配置 Trystero
+      const appId = 'your-app-id';
+      const config = {appId, provider: 'firebase', firebaseConfig};
+    
     // 加入房間
     document.getElementById('joinBtn').addEventListener('click', async () => {
       const roomId = document.getElementById('roomId').value;
@@ -71,9 +75,6 @@
         data: true
       });
       
-      // 配置 Trystero
-      const appId = 'your-app-id';
-      const config = {appId, provider: 'firebase', firebaseConfig};
       
       try {
         // 使用導入的 joinRoom 函數
