@@ -2,18 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WebSocket Echo Example</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 2em; }
-    #messages { border: 1px solid #ccc; min-height: 100px; padding: 1em; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trystero with Firebase Demo</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://unpkg.com/trystero@0.22.0/dist/trystero.js"></script>
 </head>
 <body>
-  <h1>ws.ifelse.io WebSocket Echo Demo</h1>
-  <input type="text" id="input" placeholder="Type a message...">
-  <button id="sendBtn">Send</button>
-  <div id="messages"></div>
+  <h1>Trystero with Firebase Demo</h1>
+  
+  <div>
+    <label for="roomId">Room ID:</label>
+    <input type="text" id="roomId" value="default-room">
+    <button id="joinBtn">Join Room</button>
+  </div>
+  
+  <div>
+    <h2>Local Video</h2>
+    <video id="localVideo" autoplay muted playsinline></video>
+  </div>
+  
+  <div>
+    <h2>Remote Videos</h2>
+    <div id="remoteVideos"></div>
+  </div>
+  
+  <div>
+    <h2>Messages</h2>
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button id="sendBtn">Send</button>
+    <ul id="messages"></ul>
+  </div>
 
-  <script src="main.js"></script>
+  <script>
+    // 你的 Firebase 配置
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // 初始化 Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // 創建 Trystero 配置
+    const appId = 'your-app-id'; // 可以是任意字符串，用於區分不同應用
+    const config = {appId, provider: 'firebase', firebaseConfig};
+    
+    let room;
+    let localStream;
+    let peers = {};
+
+    // 加入房間按鈕點擊事件
+    document.getElementById('joinBtn').addEventListener('click', async () => {
+      const roomId = document.getElementById('roomId').value;
+      
+      // 初始化 Trystero 房間
+      room = Trystero(config).joinRoom(roomId, {
+        stream: true,
+        data: true
+      });
+      
+      // 設置事件監聽
+      setupRoomListeners(room);
+      
+      // 獲取本地媒體流
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true
+      });
+      
+      // 顯示本地視頻
+      document.getElementById('localVideo').srcObject = localStream;
+      
+      // 發送流給其他對等端
+      room.addStream(localStream);
+    });
+    
+    // 設置房間事件監聽
+    function setupRoomListeners(room) {
+      // 當對等端加入時
+      room.onPeerJoin(peerId => {
+        console.log('peer joined:', peerId);
+        peers[peerId] = {id: peerId};
+      });
+      
+      // 當對等端離開時
+      room.onPeerLeave(peerId => {
+        console.log('peer left:', peerId);
+        const videoContainer = document.getElementById(`remote-${peerId}`);
+        if (videoContainer) {
+          videoContainer.remove();
+        }
+        delete peers[peerId];
+      });
+      
+      // 接收到流時
+      room.onPeerStream((stream, peerId) => {
+        console.log('got stream from:', peerId);
+        
+        const video = document.createElement('video');
+        video.id = `video-${peerId}`;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.srcObject = stream;
+        
+        const container = document.createElement('div');
+        container.id = `remote-${peerId}`;
+        container.innerHTML = `<p>Peer: ${peerId}</p>`;
+        container.appendChild(video);
+        
+        document.getElementById('remoteVideos').appendChild(container);
+      });
+      
+      // 接收到消息時
+      room.onPeerMessage((data, peerId) => {
+        console.log('got message from:', peerId, data);
+        const li = document.createElement('li');
+        li.textContent = `[${peerId}]: ${data}`;
+        document.getElementById('messages').appendChild(li);
+      });
+    }
+    
+    // 發送消息按鈕點擊事件
+    document.getElementById('sendBtn').addEventListener('click', () => {
+      const message = document.getElementById('messageInput').value;
+      if (message && room) {
+        room.sendMessage(message);
+        const li = document.createElement('li');
+        li.textContent = `[You]: ${message}`;
+        document.getElementById('messages').appendChild(li);
+        document.getElementById('messageInput').value = '';
+      }
+    });
+  </script>
 </body>
 </html>
