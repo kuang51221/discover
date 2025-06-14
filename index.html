@@ -71,11 +71,15 @@
     const messageInput = document.getElementById('messageInput');
     const sendBtn = document.getElementById('sendBtn');
     const messagesList = document.getElementById('messages');
-    
+    try {
     // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
-    
+    console.log("Firebase 數據庫初始化成功", database);
+    } catch (error) {
+      console.error("Firebase 初始化失敗:", error);
+    }
+      
     // 加入房間
     joinBtn.addEventListener('click', async () => {
       try {
