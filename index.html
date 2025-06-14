@@ -1,161 +1,233 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trystero with Firebase (ES Modules)</title>
+  <title>本地托管的 WebRTC 聊天室</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    video { background: #000; width: 300px; height: 225px; }
+    #remoteVideos { display: flex; flex-wrap: wrap; gap: 10px; }
+    .video-container { border: 1px solid #ccc; padding: 10px; }
+    #messages { list-style: none; padding: 0; border: 1px solid #ddd; height: 200px; overflow-y: auto; }
+    #messages li { padding: 8px; border-bottom: 1px solid #eee; }
+    #messages li:nth-child(odd) { background: #f9f9f9; }
+  </style>
 </head>
 <body>
-  <h1>Trystero with Firebase (ES Modules)</h1>
+  <h1>WebRTC 視頻聊天室</h1>
   
   <div>
-    <label for="roomId">Room ID:</label>
-    <input type="text" id="roomId" value="default-room">
-    <button id="joinBtn">Join Room</button>
+    <label for="roomId">房間 ID:</label>
+    <input type="text" id="roomId" value="public-room">
+    <button id="joinBtn">加入房間</button>
+    <button id="leaveBtn" disabled>離開房間</button>
   </div>
   
   <div>
-    <h2>Local Video</h2>
+    <h2>我的視頻</h2>
     <video id="localVideo" autoplay muted playsinline></video>
   </div>
   
   <div>
-    <h2>Remote Videos</h2>
+    <h2>其他參與者</h2>
     <div id="remoteVideos"></div>
   </div>
   
   <div>
-    <h2>Messages</h2>
-    <input type="text" id="messageInput" placeholder="Type a message">
-    <button id="sendBtn">Send</button>
+    <h2>聊天室</h2>
+    <input type="text" id="messageInput" placeholder="輸入訊息...">
+    <button id="sendBtn">發送</button>
     <ul id="messages"></ul>
   </div>
 
-  <!-- 使用 ES Modules 方式導入 -->
   <script type="module">
-    // 導入 Trystero
-    // 注意: 你需要確保 trystero-torrent.min.js 文件存在於指定路徑
-    // 或者使用 CDN 的模塊化版本
+    // 從本地導入庫
+    import { initializeApp } from './firebase-app.js';
+    import { getDatabase } from './firebase-database.js';
     import { joinRoom } from './trystero-torrent.min.js';
     
-    // Firebase 導入 (使用兼容模塊化版本的 Firebase)
-    //import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js';
-    //import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js';
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js';
-    import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js';
-
-    // 你的 Firebase 配置
+    // Firebase 配置 (替換為你的實際配置)
     const firebaseConfig = {
-    apiKey: "AIzaSyD8HLyXGtBX_m_qlGTSEzSwDJaqRpVF0og",
-    authDomain: "netdot-2a73d.firebaseapp.com",
-    databaseURL: "https://netdot-2a73d-default-rtdb.firebaseio.com",
-    projectId: "netdot-2a73d",
-    storageBucket: "netdot-2a73d.firebasestorage.app",
-    messagingSenderId: "560775014527",
-    appId: "1:560775014527:web:e02ca859dabb60632cf74a"
-  };
-      
+      apiKey: "AIzaSyD8HLyXGtBX_m_qlGTSEzSwDJaqRpVF0og",
+      authDomain: "netdot-2a73d.firebaseapp.com",
+      databaseURL: "https://netdot-2a73d-default-rtdb.firebaseio.com",
+      projectId: "netdot-2a73d",
+      storageBucket: "netdot-2a73d.firebasestorage.app",
+      messagingSenderId: "560775014527",
+      appId: "1:560775014527:web:e02ca859dabb60632cf74a"
+    };
+    
+    // 初始化變量
+    let room;
+    let localStream;
+    
+    // DOM 元素
+    const joinBtn = document.getElementById('joinBtn');
+    const leaveBtn = document.getElementById('leaveBtn');
+    const roomIdInput = document.getElementById('roomId');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideos = document.getElementById('remoteVideos');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const messagesList = document.getElementById('messages');
+    
     // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
     
-    let room;
-    let localStream;
-    let peers = {};
-    
-    // 配置 Trystero
-      const appId = 'your-app-id';
-      const config = {appId, provider: 'firebase', firebaseConfig};
-    
     // 加入房間
-    document.getElementById('joinBtn').addEventListener('click', async () => {
-      const roomId = document.getElementById('roomId').value;
-      const room = joinRoom(config, roomId, {
-        stream: true,
-        data: true
-      });
-      
-      
+    joinBtn.addEventListener('click', async () => {
       try {
-        // 使用導入的 joinRoom 函數
+        const roomId = roomIdInput.value.trim();
+        if (!roomId) return;
+        
+        // 獲取媒體設備
+        localStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true
+        });
+        localVideo.srcObject = localStream;
+        
+        // 配置 Trystero
+        const config = {
+          appId: 'webrtc-chat-demo',
+          provider: 'firebase',
+          firebaseConfig,
+          password: null // 可選的房間密碼
+        };
+        
+        // 加入房間
         room = joinRoom(config, roomId, {
           stream: true,
           data: true
         });
         
-        // 設置事件監聽
-        setupRoomListeners(room);
+        // 設置房間事件監聽
+        setupRoomListeners();
         
-        // 獲取本地媒體流
-        localStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: true
-        });
-        
-        // 顯示本地視頻
-        document.getElementById('localVideo').srcObject = localStream;
-        
-        // 發送流給其他對等端
+        // 發送本地流
         room.addStream(localStream);
+        
+        // 更新UI
+        joinBtn.disabled = true;
+        leaveBtn.disabled = false;
+        roomIdInput.disabled = true;
+        
+        addMessage('系統', `你已加入房間: ${roomId}`);
+        
       } catch (error) {
-        console.error('Error joining room:', error);
+        console.error('加入房間錯誤:', error);
+        addMessage('系統', `加入房間失敗: ${error.message}`);
       }
     });
     
-    // 設置房間事件監聽
-    function setupRoomListeners(room) {
-      // 當對等端加入時
+    // 離開房間
+    leaveBtn.addEventListener('click', () => {
+      if (room) {
+        room.leave();
+        cleanup();
+        addMessage('系統', '你已離開房間');
+      }
+    });
+    
+    // 發送消息
+    sendBtn.addEventListener('click', () => {
+      const message = messageInput.value.trim();
+      if (message && room) {
+        room.sendMessage(message);
+        addMessage('你', message);
+        messageInput.value = '';
+      }
+    });
+    
+    // 回車發送消息
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendBtn.click();
+      }
+    });
+    
+    // 設置房間事件監聽器
+    function setupRoomListeners() {
+      // 新對等端加入
       room.onPeerJoin(peerId => {
-        console.log('peer joined:', peerId);
-        peers[peerId] = {id: peerId};
+        addMessage('系統', `新用戶加入: ${peerId}`);
       });
       
-      // 當對等端離開時
+      // 對等端離開
       room.onPeerLeave(peerId => {
-        console.log('peer left:', peerId);
-        const videoContainer = document.getElementById(`remote-${peerId}`);
-        if (videoContainer) {
-          videoContainer.remove();
-        }
-        delete peers[peerId];
+        addMessage('系統', `用戶離開: ${peerId}`);
+        removeVideo(peerId);
       });
       
-      // 接收到流時
+      // 接收遠程流
       room.onPeerStream((stream, peerId) => {
-        console.log('got stream from:', peerId);
-        
-        const video = document.createElement('video');
-        video.id = `video-${peerId}`;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.srcObject = stream;
-        
-        const container = document.createElement('div');
-        container.id = `remote-${peerId}`;
-        container.innerHTML = `<p>Peer: ${peerId}</p>`;
-        container.appendChild(video);
-        
-        document.getElementById('remoteVideos').appendChild(container);
+        addMessage('系統', `接收到 ${peerId} 的視頻流`);
+        addVideo(stream, peerId);
       });
       
-      // 接收到消息時
-      room.onPeerMessage((data, peerId) => {
-        console.log('got message from:', peerId, data);
-        const li = document.createElement('li');
-        li.textContent = `[${peerId}]: ${data}`;
-        document.getElementById('messages').appendChild(li);
+      // 接收消息
+      room.onPeerMessage((message, peerId) => {
+        addMessage(`用戶 ${peerId}`, message);
       });
     }
     
-    // 發送消息按鈕點擊事件
-    document.getElementById('sendBtn').addEventListener('click', () => {
-      const message = document.getElementById('messageInput').value;
-      if (message && room) {
-        room.sendMessage(message);
-        const li = document.createElement('li');
-        li.textContent = `[You]: ${message}`;
-        document.getElementById('messages').appendChild(li);
-        document.getElementById('messageInput').value = '';
+    // 添加視頻元素
+    function addVideo(stream, peerId) {
+      // 如果已經存在則先移除
+      removeVideo(peerId);
+      
+      const video = document.createElement('video');
+      video.id = `video-${peerId}`;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      
+      const container = document.createElement('div');
+      container.className = 'video-container';
+      container.id = `container-${peerId}`;
+      container.innerHTML = `<p>用戶: ${peerId}</p>`;
+      container.appendChild(video);
+      
+      remoteVideos.appendChild(container);
+    }
+    
+    // 移除視頻元素
+    function removeVideo(peerId) {
+      const container = document.getElementById(`container-${peerId}`);
+      if (container) {
+        container.remove();
+      }
+    }
+    
+    // 添加消息到聊天室
+    function addMessage(sender, message) {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${sender}:</strong> ${message}`;
+      messagesList.appendChild(li);
+      messagesList.scrollTop = messagesList.scrollHeight;
+    }
+    
+    // 清理資源
+    function cleanup() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localVideo.srcObject = null;
+      }
+      
+      remoteVideos.innerHTML = '';
+      joinBtn.disabled = false;
+      leaveBtn.disabled = true;
+      roomIdInput.disabled = false;
+      room = null;
+    }
+    
+    // 頁面卸載時清理
+    window.addEventListener('beforeunload', () => {
+      if (room) {
+        room.leave();
+        cleanup();
       }
     });
   </script>
