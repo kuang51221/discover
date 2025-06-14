@@ -6,7 +6,7 @@
   <title>Trystero with Firebase Demo</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://unpkg.com/trystero@0.22.0/dist/trystero.js"></script>
+  
 </head>
 <body>
   <h1>Trystero with Firebase Demo</h1>
@@ -35,16 +35,17 @@
   </div>
 
   <script>
+    import { joinRoom } from './trystero-torrent.min.js';
     // 你的 Firebase 配置
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+    apiKey: "AIzaSyD8HLyXGtBX_m_qlGTSEzSwDJaqRpVF0og",
+    authDomain: "netdot-2a73d.firebaseapp.com",
+    databaseURL: "https://netdot-2a73d-default-rtdb.firebaseio.com",
+    projectId: "netdot-2a73d",
+    storageBucket: "netdot-2a73d.firebasestorage.app",
+    messagingSenderId: "560775014527",
+    appId: "1:560775014527:web:b8c9f0885d47df332cf74a"
+  };
 
     // 初始化 Firebase
     firebase.initializeApp(firebaseConfig);
