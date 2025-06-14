@@ -173,7 +173,7 @@
       });
       
       // 接收消息
-      room.onPeerMessage()((message, peerId) => {
+      room.onPeerMessage((message, peerId) => {
         addMessage(`用戶 ${peerId}`, message);
       });
     }
