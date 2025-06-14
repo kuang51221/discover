@@ -34,8 +34,8 @@
     <ul id="messages"></ul>
   </div>
 
-  <script>
-    import Trystero from 'trystero';
+  <script type="module">
+    import {joinRoom} from './trystero-torrent.min.js'
     // 你的 Firebase 配置
     const firebaseConfig = {
     apiKey: "AIzaSyD8HLyXGtBX_m_qlGTSEzSwDJaqRpVF0og",
@@ -63,11 +63,11 @@
       const roomId = document.getElementById('roomId').value;
       
       // 初始化 Trystero 房間
-              
-      room = Trystero(config).joinRoom(roomId, {
+      const room = joinRoom(config, 'trystero-diagnostic-room').joinRoom(roomId, {
         stream: true,
         data: true
       });
+      
       
       // 設置事件監聽
       setupRoomListeners(room);
